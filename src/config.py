@@ -4,7 +4,7 @@ Uses environment variables with sensible defaults for production deployment.
 """
 import os
 from typing import List, Optional
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 from pathlib import Path
 
@@ -55,13 +55,15 @@ class ScrapingSettings(BaseSettings):
         env_prefix = "K8S_COPILOT_"
         case_sensitive = False
     
-    @validator('output_dir')
+    @field_validator('output_dir')
+    @classmethod
     def create_output_dir(cls, v):
         """Ensure output directory exists."""
         Path(v).mkdir(parents=True, exist_ok=True)
         return v
     
-    @validator('log_level')
+    @field_validator('log_level')
+    @classmethod
     def validate_log_level(cls, v):
         """Validate log level."""
         valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
@@ -69,7 +71,8 @@ class ScrapingSettings(BaseSettings):
             raise ValueError(f'Log level must be one of: {valid_levels}')
         return v.upper()
     
-    @validator('log_format')
+    @field_validator('log_format')
+    @classmethod
     def validate_log_format(cls, v):
         """Validate log format."""
         valid_formats = ['json', 'text']

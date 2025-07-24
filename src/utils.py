@@ -115,6 +115,10 @@ def validate_yaml_content(content: str) -> bool:
             logger.debug("yaml_validation_failed", reason="empty_document")
             return False
         
+        # Initialize Kubernetes resource indicators
+        has_kind = False
+        has_api_version = False
+        
         # Check for common Kubernetes resource indicators
         if isinstance(parsed, dict):
             has_kind = 'kind' in parsed
