@@ -77,9 +77,13 @@ def setup_qwen_lora_model(model_choice="Qwen2-0.5B", lora_rank=8):
     )
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     
-    # Ensure pad token is set
+    # Ensure pad token is set properly
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    
+    # Resize token embeddings if needed
+    if len(tokenizer) > model.config.vocab_size:
+        model.resize_token_embeddings(len(tokenizer))
     
     print(f"📊 Original parameters: {model.num_parameters():,}")
     
@@ -91,10 +95,20 @@ def setup_qwen_lora_model(model_choice="Qwen2-0.5B", lora_rank=8):
         lora_dropout=0.1,
         target_modules=target_modules,
         bias="none",
+        use_rslora=False,  # Ensure standard LoRA
+        use_dora=False,    # Disable DoRA for compatibility
     )
     
     # Add LoRA adapters
     model = get_peft_model(model, lora_config)
+    
+    # Enable training mode and gradient computation
+    model.train()
+    
+    # Ensure LoRA parameters require gradients
+    for name, param in model.named_parameters():
+        if 'lora_' in name:
+            param.requires_grad = True
     
     print("✅ LoRA adapters added!")
     model.print_trainable_parameters()
@@ -115,8 +129,10 @@ def train_qwen_lora_model(dataset, model, tokenizer, model_choice, epochs=2, out
             truncation=True, 
             padding=False,
             max_length=1024,  # Qwen can handle longer sequences
-            return_tensors=None
+            return_tensors=None,
+            add_special_tokens=True
         )
+        # Create labels for causal language modeling
         result["labels"] = result["input_ids"].copy()
         return result
     
@@ -129,7 +145,7 @@ def train_qwen_lora_model(dataset, model, tokenizer, model_choice, epochs=2, out
         num_train_epochs=epochs,
         per_device_train_batch_size=2 if torch.cuda.is_available() else 1,
         gradient_accumulation_steps=8 if torch.cuda.is_available() else 16,
-        learning_rate=1e-4,  # Slightly lower for Qwen
+        learning_rate=2e-4,  # Good learning rate for LoRA
         weight_decay=0.01,
         warmup_steps=50,
         logging_steps=25,
@@ -139,23 +155,49 @@ def train_qwen_lora_model(dataset, model, tokenizer, model_choice, epochs=2, out
         dataloader_num_workers=0,
         remove_unused_columns=False,
         report_to="none",
-        # Memory optimization
-        gradient_checkpointing=True,
+        # LoRA-specific optimizations
+        gradient_checkpointing=False,  # Disable for gradient debugging
         dataloader_pin_memory=False,
+        optim="adamw_torch",  # Use PyTorch AdamW
+        lr_scheduler_type="linear",  # Linear scheduler works well with LoRA
+        save_only_model=True,  # Save only model weights
     )
     
-    # Data collator
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer,
-        mlm=False,
-    )
+    # Custom data collator to ensure proper tensor handling
+    from transformers import default_data_collator
+    
+    def custom_data_collator(features):
+        batch = tokenizer.pad(
+            features,
+            padding='max_length',  # Use 'max_length' instead of True
+            max_length=1024,
+            truncation=True,  # Add truncation for safety
+            return_tensors="pt",
+        )
+        # Ensure labels are properly set up
+        if "labels" not in batch:
+            batch["labels"] = batch["input_ids"].clone()
+        
+        # Mask padding tokens in labels (set to -100 to ignore in loss)
+        batch["labels"][batch["labels"] == tokenizer.pad_token_id] = -100
+        return batch
+    
+    data_collator = custom_data_collator
+    
+    # Debug: Check model state before training
+    print(f"🔍 Model training mode: {model.training}")
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"🔍 Trainable parameters: {trainable_params:,}")
+    
+    # Ensure model is ready for training
+    model.train()
     
     # Trainer
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=tokenized_dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,  # Use processing_class instead of tokenizer
         data_collator=data_collator,
     )
     

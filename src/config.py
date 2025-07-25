@@ -1,5 +1,5 @@
 """
-Configuration management for kubernetes-copilot data scraping.
+Configuration management for kubechron data scraping.
 Uses environment variables with sensible defaults for production deployment.
 """
 import os

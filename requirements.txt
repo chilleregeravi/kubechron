@@ -1,29 +1,41 @@
 # Core ML libraries
-torch>=2.0.0
-transformers>=4.35.0
-datasets>=2.14.0
-peft>=0.6.0
+torch
+transformers
+datasets
+peft
 
 # Data processing
-numpy>=1.24.0
-pandas>=2.0.0
+numpy
+pandas
 
 # Configuration and utilities  
-pydantic>=2.0.0
-pydantic-settings>=2.0.0
-PyYAML>=6.0.0
+pydantic
+pydantic-settings
+PyYAML
 
 # Logging
-structlog>=23.0.0
+structlog
 
 # Git operations
-GitPython>=3.1.0
+GitPython
 
 # Web scraping (for data collection)
-requests>=2.31.0
-aiohttp>=3.8.0
-beautifulsoup4>=4.12.0
+requests
+aiohttp
+beautifulsoup4
 
 # Development and testing
-tqdm>=4.65.0
-jupyter>=1.0.0 
+tqdm
+jupyter
+
+# Verifier system dependencies
+# Note: Most verifier dependencies are covered above
+# YAML processing: PyYAML (already included)
+# ML inference: torch, transformers, peft (already included)
+# Data handling: numpy, datasets (already included)
+# All other verifier imports are Python built-ins:
+# - json, re, subprocess, tempfile, typing, dataclasses
+# - pathlib, os, time
+
+# Optional verifier dependencies (install separately if needed):
+# - kubectl (for YAML kubectl validation - system install required) 

@@ -1,5 +1,5 @@
 """
-Structured logging setup for kubernetes-copilot data scraping.
+Structured logging setup for kubechron data scraping.
 Provides consistent logging across all modules with configurable formats and levels.
 """
 import sys
@@ -73,7 +73,7 @@ def configure_logging() -> structlog.stdlib.BoundLogger:
     
     atexit.register(cleanup_logging)
     
-    return structlog.get_logger("kubernetes-copilot")
+    return structlog.get_logger("kubechron")
 
 
 class MetricsLogger:

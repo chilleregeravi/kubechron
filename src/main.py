@@ -1,5 +1,5 @@
 """
-Main orchestrator for kubernetes-copilot data scraping pipeline.
+Main orchestrator for kubechron data scraping pipeline.
 Production-grade implementation with comprehensive error handling and monitoring.
 """
 import sys
